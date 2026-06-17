@@ -1,5 +1,4 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Send as SendIcon, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
 import TextArea from '../components/TextArea';
