@@ -2,7 +2,6 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
-import { getMessageInfo } from '../utils/api';
 
 export default function Receive() {
   const [code, setCode] = useState('');
