@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-tp-bg text-tp-primary;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-tp-surface/80 backdrop-blur-lg border border-white/5;
+  }
+  
+  .glow-red {
+    box-shadow: 0 0 20px rgba(255, 77, 77, 0.15);
+  }
+  
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(77, 166, 255, 0.15);
+  }
+}
