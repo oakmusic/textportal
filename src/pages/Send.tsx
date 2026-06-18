@@ -4,8 +4,10 @@ import Button from '../components/Button';
 import TextArea from '../components/TextArea';
 import { sendText } from '../utils/api';
 import Result from './Result';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Send() {
+  const { t } = useLanguage();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,7 +24,7 @@ export default function Send() {
       const data = await sendText(text);
       setResult(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to send. Please try again.');
+      setError(err.message || t('send_error'));
     } finally {
       setLoading(false);
     }
@@ -34,12 +36,12 @@ export default function Send() {
 
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-6 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="text-2xl font-bold tracking-wider mb-2">SEND TEXT</h2>
+      <h2 className="text-2xl font-bold tracking-wider mb-2">{t('send_title')}</h2>
       
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
         <TextArea 
           rows={10}
-          placeholder="Paste your text or URLs here..."
+          placeholder={t('send_placeholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={2000}
@@ -63,7 +65,7 @@ export default function Send() {
           ) : (
             <>
               <SendIcon className="w-5 h-5" />
-              SEND
+              {t('send_button')}
             </>
           )}
         </Button>

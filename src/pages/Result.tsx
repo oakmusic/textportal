@@ -3,6 +3,7 @@ import QRCode from 'react-qr-code';
 import { Copy, CheckCircle2, Link2, Clock } from 'lucide-react';
 import Button from '../components/Button';
 import { copyToClipboard } from '../utils/clipboard';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ResultProps {
   code: string;
@@ -10,6 +11,7 @@ interface ResultProps {
 }
 
 export default function Result({ code, url }: ResultProps) {
+  const { t } = useLanguage();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300);
@@ -44,28 +46,28 @@ export default function Result({ code, url }: ResultProps) {
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center gap-8 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-wider mb-2 text-tp-red">READY TO RECEIVE</h2>
+        <h2 className="text-2xl font-bold tracking-wider mb-2 text-tp-red">{t('result_title')}</h2>
         <div className="flex items-center justify-center gap-2 text-tp-secondary mt-4">
           <Clock className="w-4 h-4" />
-          <span>Expires in: <span className="font-mono text-tp-primary">{formatTime(timeLeft)}</span></span>
+          <span>{t('result_expires')} <span className="font-mono text-tp-primary">{formatTime(timeLeft)}</span></span>
         </div>
       </div>
       
       <div className="glass-panel p-8 rounded-3xl flex flex-col items-center gap-8 w-full border-tp-red/20 glow-red relative overflow-hidden">
         {timeLeft === 0 && (
           <div className="absolute inset-0 bg-tp-bg/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
-            <span className="text-tp-red font-bold text-xl tracking-wider">EXPIRED</span>
+            <span className="text-tp-red font-bold text-xl tracking-wider">{t('result_expired')}</span>
           </div>
         )}
 
         <div className="flex flex-col items-center gap-2">
-          <span className="text-tp-secondary text-sm tracking-widest uppercase">Code</span>
+          <span className="text-tp-secondary text-sm tracking-widest uppercase">{t('result_code')}</span>
           <div className="flex items-center gap-4">
             <span className="text-5xl font-mono font-bold tracking-widest text-tp-primary">{code}</span>
             <button 
               onClick={handleCopyCode}
               className="p-2 rounded-full hover:bg-white/10 text-tp-secondary hover:text-white transition-colors"
-              title="Copy Code"
+              title={t('result_copy_code')}
             >
               {copiedCode ? <CheckCircle2 className="w-6 h-6 text-green-400" /> : <Copy className="w-6 h-6" />}
             </button>
@@ -79,9 +81,9 @@ export default function Result({ code, url }: ResultProps) {
         <div className="w-full flex flex-col gap-3">
           <Button variant="secondary" fullWidth onClick={handleCopyUrl}>
             {copiedUrl ? (
-              <><CheckCircle2 className="w-5 h-5 text-green-400" /> COPIED URL</>
+              <><CheckCircle2 className="w-5 h-5 text-green-400" /> {t('result_copied_url')}</>
             ) : (
-              <><Link2 className="w-5 h-5" /> COPY DIRECT URL</>
+              <><Link2 className="w-5 h-5" /> {t('result_copy_url')}</>
             )}
           </Button>
         </div>

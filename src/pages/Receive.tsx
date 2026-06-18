@@ -2,8 +2,10 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Receive() {
+  const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +22,7 @@ export default function Receive() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (code.length !== 4) {
-      setError('Code must be 4 characters.');
+      setError(t('receive_error_length'));
       return;
     }
     
@@ -33,7 +35,7 @@ export default function Receive() {
       // Let's go to /r/:code which handles fetching and displaying.
       navigate(`/r/${code}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to check code.');
+      setError(err.message || t('receive_error_check'));
       setLoading(false);
     }
   };
@@ -41,8 +43,8 @@ export default function Receive() {
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center gap-8 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-wider mb-2 text-tp-blue">RECEIVE TEXT</h2>
-        <p className="text-tp-secondary">Enter the 4-character code</p>
+        <h2 className="text-2xl font-bold tracking-wider mb-2 text-tp-blue">{t('receive_title')}</h2>
+        <p className="text-tp-secondary">{t('receive_subtitle')}</p>
       </div>
       
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6 items-center">
@@ -51,7 +53,7 @@ export default function Receive() {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           maxLength={4}
-          placeholder="XXXX"
+          placeholder={t('receive_placeholder')}
           className="text-center text-5xl font-mono font-bold tracking-widest bg-transparent border-b-2 border-tp-blue/30 focus:border-tp-blue focus:outline-none w-48 pb-2 text-tp-primary placeholder:text-tp-secondary/20 transition-colors"
           autoFocus
         />
@@ -73,7 +75,7 @@ export default function Receive() {
           ) : (
             <>
               <LogIn className="w-5 h-5" />
-              RECEIVE
+              {t('receive_button')}
             </>
           )}
         </Button>
