@@ -219,18 +219,18 @@ export async function getAdminActivity() {
   await redis.zremrangebyscore('stats:active_codes', 0, now);
 
   const recentStrs = await redis.lrange('stats:recent_activity', 0, 49);
-  const recentActivity = recentStrs.map(s => JSON.parse(s));
+  const recentActivity = recentStrs.map(s => typeof s === 'string' ? JSON.parse(s) : s);
 
   const activeCodeStrs = await redis.zrange('stats:active_codes', 0, -1, { withScores: true });
   const activeCodes = [];
   for (let i = 0; i < activeCodeStrs.length; i += 2) {
-    const memberStr = activeCodeStrs[i] as string;
-    const score = Number(activeCodeStrs[i + 1]);
+    const dataVal = activeCodeStrs[i];
+    const expiresAt = Number(activeCodeStrs[i + 1]);
     try {
-      const data = JSON.parse(memberStr);
-      activeCodes.push({ code: data.c, length: data.l, expiresAt: score });
+      const { c, l } = typeof dataVal === 'string' ? JSON.parse(dataVal) : dataVal;
+      activeCodes.push({ code: c, length: l, expiresAt });
     } catch(e) {
-      activeCodes.push({ code: memberStr, length: 0, expiresAt: score });
+      activeCodes.push({ code: String(dataVal), length: 0, expiresAt });
     }
   }
 

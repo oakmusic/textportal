@@ -20,7 +20,7 @@ export const handler: Handler = async (event) => {
     // Check if IP is blocked
     if (await storage.isIpBlocked(ip)) {
       await trackBlockedIpEvent(ip);
-      return { statusCode: 429, body: JSON.stringify({ error: 'Too many invalid attempts. Try again in 5 minutes.' }) };
+      return { statusCode: 429, body: JSON.stringify({ error: 'Too many invalid attempts. Try again in 1 minute.' }) };
     }
 
     const message = await storage.getMessage(code);
@@ -28,8 +28,8 @@ export const handler: Handler = async (event) => {
     if (!message) {
       // Register failure
       const fails = await storage.registerFailedAttempt(ip);
-      if (fails >= 3) {
-        await storage.blockIp(ip, 300); // block for 5 mins
+      if (fails >= 5) {
+        await storage.blockIp(ip, 60); // block for 1 min
         await trackBlockedIpEvent(ip);
       }
       return { statusCode: 404, body: JSON.stringify({ error: 'Message not found or expired' }) };
