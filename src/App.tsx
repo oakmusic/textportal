@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Send from './pages/Send';
 import Receive from './pages/Receive';
 import DirectReceive from './pages/DirectReceive';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/send" element={<Send />} />
         <Route path="/receive" element={<Receive />} />
         <Route path="/r/:code" element={<DirectReceive />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </Layout>
   );

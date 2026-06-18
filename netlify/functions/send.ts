@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { getStorageProvider } from './storage';
 import { generateCode } from './utils/codeGenerator';
+import { trackMessageCreated } from './utils/stats';
 
 const MAX_LENGTH = 20000;
 const TTL_SECONDS = 300; // 5 minutes
@@ -38,6 +39,9 @@ export const handler: Handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate unique code' }) };
     }
     
+    const userAgent = event.headers['user-agent'] || 'Unknown';
+    await trackMessageCreated(code, text.length, userAgent, TTL_SECONDS);
+
     const baseUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
     const url = `${baseUrl}/r/${code}`;
     

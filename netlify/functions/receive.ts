@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { getStorageProvider } from './storage';
+import { trackBlockedIpEvent, trackMessageRetrieved } from './utils/stats';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -18,6 +19,7 @@ export const handler: Handler = async (event) => {
     
     // Check if IP is blocked
     if (await storage.isIpBlocked(ip)) {
+      await trackBlockedIpEvent(ip);
       return { statusCode: 429, body: JSON.stringify({ error: 'Too many invalid attempts. Try again in 5 minutes.' }) };
     }
 
@@ -28,6 +30,7 @@ export const handler: Handler = async (event) => {
       const fails = await storage.registerFailedAttempt(ip);
       if (fails >= 3) {
         await storage.blockIp(ip, 300); // block for 5 mins
+        await trackBlockedIpEvent(ip);
       }
       return { statusCode: 404, body: JSON.stringify({ error: 'Message not found or expired' }) };
     }
@@ -35,14 +38,8 @@ export const handler: Handler = async (event) => {
     // Success: reset failures and return message
     await storage.resetFailedAttempts(ip);
     
-    // Message should be single-read? The requirement says:
-    // "No history. Texts automatically expire after 5 minutes." 
-    // It doesn't explicitly say read-once, but usually short codes are.
-    // If it expires after 5 mins naturally TTL, we leave it, or we delete on read.
-    // Let's delete on read for security, if someone else guesses it. Actually, wait.
-    // "Texts automatically expire after 5 minutes." Let's keep it until TTL expires so they can refresh,
-    // or let's just let it naturally expire. "Messages expire automatically after: 300 seconds".
-    // We will let TTL handle it so they don't lose it if they reload.
+    const userAgent = event.headers['user-agent'] || 'Unknown';
+    await trackMessageRetrieved(code, message.createdAt, message.text.length, userAgent);
     
     return {
       statusCode: 200,
