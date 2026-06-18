@@ -44,7 +44,7 @@ export default function Send() {
           placeholder={t('send_placeholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          maxLength={2000}
+          maxLength={20000}
           currentLength={text.length}
           autoFocus
         />

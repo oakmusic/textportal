@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { getStorageProvider } from './storage';
 import { generateCode } from './utils/codeGenerator';
 
-const MAX_LENGTH = 2000;
+const MAX_LENGTH = 20000;
 const TTL_SECONDS = 300; // 5 minutes
 
 export const handler: Handler = async (event) => {
