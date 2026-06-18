@@ -133,8 +133,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 backdrop-blur-md">
                 <h3 className="mb-4 font-medium text-zinc-300">Performance</h3>
                 <div className="space-y-3 text-sm text-zinc-400">
-                  <div className="flex justify-between"><span>Fastest Retrieval</span><span className="text-emerald-400 font-mono">{activity.performance.fastest}ms</span></div>
-                  <div className="flex justify-between"><span>Slowest Retrieval</span><span className="text-rose-400 font-mono">{activity.performance.slowest}ms</span></div>
+                  <div className="flex justify-between"><span>Fastest Retrieval</span><span className="text-emerald-400 font-mono">{(activity.performance.fastest / 1000).toFixed(2)}s</span></div>
+                  <div className="flex justify-between"><span>Slowest Retrieval</span><span className="text-rose-400 font-mono">{(activity.performance.slowest / 1000).toFixed(2)}s</span></div>
                 </div>
              </div>
           </div>
