@@ -28,11 +28,11 @@ export class R2StorageProvider implements FileStorageProvider {
     await this.client.send(command);
   }
 
-  async getDownloadUrl(key: string, filename: string): Promise<string> {
+  async getDownloadUrl(key: string, filename: string, forceDownload?: boolean): Promise<string> {
     const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
     let disposition = 'attachment';
     
-    if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) {
+    if (!forceDownload && ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) {
       disposition = 'inline';
     }
 

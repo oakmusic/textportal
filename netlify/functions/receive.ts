@@ -52,7 +52,8 @@ export const handler: Handler = async (event) => {
     } else if (file) {
       await trackFileDownloaded(code, file.uploadedAt, file.size, userAgent);
       const fileStorage = getFileStorageProvider();
-      const downloadUrl = await fileStorage.getDownloadUrl(file.fileKey, file.filename);
+      const downloadUrl = await fileStorage.getDownloadUrl(file.fileKey, file.filename, true);
+      const previewUrl = await fileStorage.getDownloadUrl(file.fileKey, file.filename, false);
       
       return {
         statusCode: 200,
@@ -63,7 +64,8 @@ export const handler: Handler = async (event) => {
             filename: file.filename,
             size: file.size,
             mimeType: file.mimeType,
-            downloadUrl
+            downloadUrl,
+            previewUrl
           }
         })
       };

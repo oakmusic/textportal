@@ -5,7 +5,7 @@ import * as path from 'path';
 const UPLOADS_DIR = path.resolve(process.cwd(), '.local-store', 'uploads');
 
 export const handler: Handler = async (event) => {
-  const { key, filename } = event.queryStringParameters || {};
+  const { key, filename, download } = event.queryStringParameters || {};
   if (!key) return { statusCode: 400, body: 'Missing key' };
 
   const filePath = path.join(UPLOADS_DIR, key.replace(/\//g, '_'));
@@ -25,7 +25,7 @@ export const handler: Handler = async (event) => {
   else if (ext === '.webp') contentType = 'image/webp';
   else if (ext === '.gif') contentType = 'image/gif';
 
-  if (contentType.startsWith('image/')) {
+  if (!download && contentType.startsWith('image/')) {
     disposition = 'inline';
   }
 

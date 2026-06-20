@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, File, Image as ImageIcon, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -14,8 +14,19 @@ export default function FileUploader({ onFileSelect, disabled }: FileUploaderPro
   const { t } = useLanguage();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -109,9 +120,15 @@ export default function FileUploader({ onFileSelect, disabled }: FileUploaderPro
       ) : (
         <div className="glass-panel p-6 rounded-2xl flex items-center justify-between border-tp-blue/30 glow-blue">
           <div className="flex items-center gap-4 overflow-hidden">
-            <div className="p-3 bg-tp-blue/20 rounded-xl">
-              {selectedFile.type.startsWith('image/') ? <ImageIcon className="text-tp-blue w-6 h-6" /> : <File className="text-tp-blue w-6 h-6" />}
-            </div>
+            {previewUrl ? (
+              <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-tp-blue/30 bg-black/40">
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="p-3 bg-tp-blue/20 rounded-xl shrink-0">
+                {selectedFile.type.startsWith('image/') ? <ImageIcon className="text-tp-blue w-6 h-6" /> : <File className="text-tp-blue w-6 h-6" />}
+              </div>
+            )}
             <div className="flex flex-col truncate">
               <span className="text-tp-primary font-medium truncate" title={selectedFile.name}>{selectedFile.name}</span>
               <span className="text-tp-secondary text-sm">{formatSize(selectedFile.size)}</span>

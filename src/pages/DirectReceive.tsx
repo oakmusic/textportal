@@ -115,7 +115,7 @@ export default function DirectReceive() {
         <div className="glass-panel p-8 rounded-3xl flex flex-col items-center gap-6 w-full border-tp-blue/30 glow-blue">
           {isImage ? (
             <div className="w-full aspect-square rounded-xl overflow-hidden bg-black/20 border border-tp-blue/20 flex items-center justify-center mb-4">
-              <img src={file.downloadUrl} alt={file.filename} className="w-full h-full object-contain" />
+              <img src={file.previewUrl} alt={file.filename} className="w-full h-full object-contain" />
             </div>
           ) : (
             <div className="w-32 h-32 rounded-2xl bg-tp-blue/10 flex items-center justify-center mb-4 border border-tp-blue/20">

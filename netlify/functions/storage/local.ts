@@ -16,8 +16,8 @@ export class LocalFileStorageProvider implements FileStorageProvider {
     fs.writeFileSync(filePath, fileBuffer);
   }
 
-  async getDownloadUrl(key: string, filename: string): Promise<string> {
-    return `/.netlify/functions/downloadLocal?key=${encodeURIComponent(key)}&filename=${encodeURIComponent(filename)}`;
+  async getDownloadUrl(key: string, filename: string, forceDownload?: boolean): Promise<string> {
+    return `/.netlify/functions/downloadLocal?key=${encodeURIComponent(key)}&filename=${encodeURIComponent(filename)}${forceDownload ? '&download=1' : ''}`;
   }
 
   async deleteFile(key: string): Promise<void> {

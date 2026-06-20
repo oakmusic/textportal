@@ -3,7 +3,7 @@ import { LocalFileStorageProvider } from './local';
 
 export interface FileStorageProvider {
   uploadFile(key: string, fileBuffer: Buffer, mimeType: string): Promise<void>;
-  getDownloadUrl(key: string, filename: string): Promise<string>;
+  getDownloadUrl(key: string, filename: string, forceDownload?: boolean): Promise<string>;
   deleteFile(key: string): Promise<void>;
 }
 
