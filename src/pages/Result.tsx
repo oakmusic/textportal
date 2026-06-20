@@ -90,7 +90,7 @@ export default function Result({ code, url, file }: ResultProps) {
           </div>
         </div>
 
-        {file ? (
+        {file && (
           <div className="w-full flex flex-col items-center gap-4 bg-black/20 p-4 rounded-xl border border-tp-red/10">
             {isImage ? (
               <ImageIcon className="w-12 h-12 text-tp-red opacity-80" />
@@ -102,11 +102,11 @@ export default function Result({ code, url, file }: ResultProps) {
               <p className="text-tp-secondary text-sm">{formatSize(file.size)}</p>
             </div>
           </div>
-        ) : (
-          <div className="bg-white p-4 rounded-xl shadow-lg">
-            <QRCode value={url} size={200} level="H" />
-          </div>
         )}
+
+        <div className="bg-white p-4 rounded-xl shadow-lg">
+          <QRCode value={url} size={200} level="H" />
+        </div>
 
         <div className="w-full flex flex-col gap-3">
           <Button variant="secondary" fullWidth onClick={handleCopyUrl}>
