@@ -137,6 +137,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="flex justify-between"><span>Slowest Retrieval</span><span className="text-rose-400 font-mono">{(activity.performance.slowest / 1000).toFixed(2)}s</span></div>
                 </div>
              </div>
+
+             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 backdrop-blur-md">
+                <h3 className="mb-4 font-medium text-zinc-300">File Statistics</h3>
+                <div className="space-y-3 text-sm text-zinc-400">
+                  <div className="flex justify-between"><span>Total Uploaded</span><span className="text-white font-mono">{activity.fileStats?.totalUploaded || 0}</span></div>
+                  <div className="flex justify-between"><span>Total Downloaded</span><span className="text-white font-mono">{activity.fileStats?.totalDownloaded || 0}</span></div>
+                  <div className="flex justify-between"><span>Total Active</span><span className="text-white font-mono">{activity.fileStats?.totalActive || 0}</span></div>
+                  <div className="flex justify-between"><span>Total Size Uploaded</span><span className="text-white font-mono">{activity.fileStats?.totalSizeUploaded || '0 B'}</span></div>
+                </div>
+             </div>
           </div>
         </div>
 

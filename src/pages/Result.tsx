@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
-import { Copy, CheckCircle2, Link2, Clock } from 'lucide-react';
+import { Copy, CheckCircle2, Link2, Clock, File as FileIcon, Image as ImageIcon } from 'lucide-react';
 import Button from '../components/Button';
 import { copyToClipboard } from '../utils/clipboard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,13 +8,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface ResultProps {
   code: string;
   url: string;
+  file?: File;
 }
 
-export default function Result({ code, url }: ResultProps) {
+export default function Result({ code, url, file }: ResultProps) {
   const { t } = useLanguage();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300);
+  const [timeLeft, setTimeLeft] = useState(file ? 24 * 60 * 60 : 300); // 24 hours for file, 5 mins for text
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -24,9 +25,22 @@ export default function Result({ code, url }: ResultProps) {
   }, []);
 
   const formatTime = (seconds: number) => {
+    if (seconds > 3600) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const handleCopyCode = async () => {
@@ -43,13 +57,15 @@ export default function Result({ code, url }: ResultProps) {
     }
   };
 
+  const isImage = file?.type.startsWith('image/');
+
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center gap-8 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center">
         <h2 className="text-2xl font-bold tracking-wider mb-2 text-tp-red">{t('result_title')}</h2>
         <div className="flex items-center justify-center gap-2 text-tp-secondary mt-4">
           <Clock className="w-4 h-4" />
-          <span>{t('result_expires')} <span className="font-mono text-tp-primary">{formatTime(timeLeft)}</span></span>
+          <span>{t('result_expires')} <span className="font-mono text-tp-primary">{formatTime(timeLeft)} {timeLeft > 3600 ? 'hrs' : ''}</span></span>
         </div>
       </div>
       
@@ -74,9 +90,23 @@ export default function Result({ code, url }: ResultProps) {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-lg">
-          <QRCode value={url} size={200} level="H" />
-        </div>
+        {file ? (
+          <div className="w-full flex flex-col items-center gap-4 bg-black/20 p-4 rounded-xl border border-tp-red/10">
+            {isImage ? (
+              <ImageIcon className="w-12 h-12 text-tp-red opacity-80" />
+            ) : (
+              <FileIcon className="w-12 h-12 text-tp-red opacity-80" />
+            )}
+            <div className="text-center w-full">
+              <p className="text-tp-primary font-medium truncate w-full" title={file.name}>{file.name}</p>
+              <p className="text-tp-secondary text-sm">{formatSize(file.size)}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white p-4 rounded-xl shadow-lg">
+            <QRCode value={url} size={200} level="H" />
+          </div>
+        )}
 
         <div className="w-full flex flex-col gap-3">
           <Button variant="secondary" fullWidth onClick={handleCopyUrl}>

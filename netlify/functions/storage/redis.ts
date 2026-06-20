@@ -1,5 +1,5 @@
 import { Redis } from '@upstash/redis';
-import { StorageProvider, TextData } from './provider';
+import { StorageProvider, TextData, FileMetadata } from './provider';
 
 export class RedisStorageProvider implements StorageProvider {
   private redis: Redis;
@@ -19,7 +19,6 @@ export class RedisStorageProvider implements StorageProvider {
     const key = `msg:${code}`;
     const data: TextData = { text, createdAt: Date.now() };
     
-    // nx: only set if it does not exist
     const result = await this.redis.set(key, JSON.stringify(data), { nx: true, ex: ttlSeconds });
     return result === 'OK';
   }
@@ -30,14 +29,36 @@ export class RedisStorageProvider implements StorageProvider {
     return data || null;
   }
 
+  async saveFileMetadata(code: string, metadata: FileMetadata, ttlSeconds: number): Promise<boolean> {
+    const key = `file:${code}`;
+    
+    const result = await this.redis.set(key, JSON.stringify(metadata), { nx: true, ex: ttlSeconds });
+    if (result === 'OK') {
+      // Track active files for cron cleanup
+      await this.redis.hset('active_files_meta', { [code]: metadata.fileKey });
+      return true;
+    }
+    return false;
+  }
+
+  async getFileMetadata(code: string): Promise<FileMetadata | null> {
+    const key = `file:${code}`;
+    const data = await this.redis.get<FileMetadata>(key);
+    return data || null;
+  }
+
   async deleteMessage(code: string): Promise<void> {
-    const key = `msg:${code}`;
-    await this.redis.del(key);
+    const msgKey = `msg:${code}`;
+    const fileKey = `file:${code}`;
+    await this.redis.del(msgKey, fileKey);
+    await this.removeActiveFileCode(code);
   }
 
   async getTTL(code: string): Promise<number> {
-    const key = `msg:${code}`;
-    const ttl = await this.redis.ttl(key);
+    let ttl = await this.redis.ttl(`msg:${code}`);
+    if (ttl < 0) {
+      ttl = await this.redis.ttl(`file:${code}`);
+    }
     return ttl >= 0 ? ttl : -1;
   }
 
@@ -64,5 +85,37 @@ export class RedisStorageProvider implements StorageProvider {
     const key = `blocked:${ip}`;
     const exists = await this.redis.exists(key);
     return exists === 1;
+  }
+
+  // --- Rate limiting for files ---
+
+  async trackFileUploadRateLimit(ip: string, sizeBytes: number): Promise<{ size: number; count: number }> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const sizeKey = `ratelimit:file:size:${ip}:${today}`;
+    const countKey = `ratelimit:file:count:${ip}:${today}`;
+
+    // Use a transaction/pipeline to increment both
+    const pipeline = this.redis.pipeline();
+    pipeline.incrby(sizeKey, sizeBytes);
+    pipeline.incr(countKey);
+    pipeline.expire(sizeKey, 86400); // 24 hours
+    pipeline.expire(countKey, 86400);
+
+    const results = await pipeline.exec();
+    
+    return {
+      size: Number(results[0]),
+      count: Number(results[1])
+    };
+  }
+
+  // --- Cron tracking ---
+
+  async getActiveFileCodes(): Promise<string[]> {
+    return await this.redis.smembers('active_files');
+  }
+
+  async removeActiveFileCode(code: string): Promise<void> {
+    await this.redis.srem('active_files', code);
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Copy, ExternalLink, Loader2, CheckCircle2 } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, CheckCircle2, Download, File } from 'lucide-react';
 import Button from '../components/Button';
 import TextArea from '../components/TextArea';
 import { receiveText } from '../utils/api';
@@ -14,7 +14,7 @@ export default function DirectReceive() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [text, setText] = useState('');
+  const [data, setData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
 
@@ -24,18 +24,20 @@ export default function DirectReceive() {
       return;
     }
 
-    const fetchText = async () => {
+    const fetchData = async () => {
       try {
-        const data = await receiveText(code);
-        setText(data.text);
+        const result = await receiveText(code);
+        setData(result);
         
-        // Try auto-copying
-        const success = await copyToClipboard(data.text);
-        if (success) {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 3000);
-        } else {
-          setCopyError(true);
+        if (result.type === 'text') {
+          // Try auto-copying
+          const success = await copyToClipboard(result.text);
+          if (success) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 3000);
+          } else {
+            setCopyError(true);
+          }
         }
       } catch (err: any) {
         setError(err.message || t('dreceive_error_message'));
@@ -44,17 +46,19 @@ export default function DirectReceive() {
       }
     };
 
-    fetchText();
+    fetchData();
   }, [code, navigate, t]);
 
   const handleCopy = async () => {
-    const success = await copyToClipboard(text);
-    if (success) {
-      setCopied(true);
-      setCopyError(false);
-      setTimeout(() => setCopied(false), 3000);
-    } else {
-      setCopyError(true);
+    if (data?.type === 'text') {
+      const success = await copyToClipboard(data.text);
+      if (success) {
+        setCopied(true);
+        setCopyError(false);
+        setTimeout(() => setCopied(false), 3000);
+      } else {
+        setCopyError(true);
+      }
     }
   };
 
@@ -65,6 +69,14 @@ export default function DirectReceive() {
     } catch {
       return false;
     }
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (loading) {
@@ -86,6 +98,46 @@ export default function DirectReceive() {
         <Button onClick={() => navigate('/receive')} fullWidth variant="secondary">
           {t('dreceive_error_button')}
         </Button>
+      </div>
+    );
+  }
+
+  if (data?.type === 'file') {
+    const file = data.file;
+    const isImage = file.mimeType.startsWith('image/');
+    
+    return (
+      <div className="w-full max-w-md mx-auto flex flex-col gap-6 mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h2 className="text-2xl font-bold tracking-wider text-tp-blue">{t('dreceive_file_title')}</h2>
+        </div>
+
+        <div className="glass-panel p-8 rounded-3xl flex flex-col items-center gap-6 w-full border-tp-blue/30 glow-blue">
+          {isImage ? (
+            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black/20 border border-tp-blue/20 flex items-center justify-center mb-4">
+              <img src={file.downloadUrl} alt={file.filename} className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-32 h-32 rounded-2xl bg-tp-blue/10 flex items-center justify-center mb-4 border border-tp-blue/20">
+              <File className="w-16 h-16 text-tp-blue" />
+            </div>
+          )}
+
+          <div className="flex flex-col items-center gap-1 w-full text-center">
+            <span className="text-xl text-tp-primary font-medium truncate w-full" title={file.filename}>{file.filename}</span>
+            <span className="text-tp-secondary tracking-wider">{formatSize(file.size)}</span>
+          </div>
+
+          <div className="w-full flex gap-3 mt-4">
+            <Button 
+              variant="primary" 
+              fullWidth 
+              onClick={() => window.open(file.downloadUrl, '_blank')}
+            >
+              <Download className="w-5 h-5" /> {t('dreceive_download')}
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -113,16 +165,16 @@ export default function DirectReceive() {
 
       <TextArea 
         rows={12}
-        value={text}
+        value={data?.text || ''}
         readOnly
         className="cursor-text"
       />
 
-      {isUrl(text.trim()) && (
+      {data?.text && isUrl(data.text.trim()) && (
         <div className="flex justify-end">
           <Button 
             variant="secondary"
-            onClick={() => window.open(text.trim(), '_blank', 'noopener,noreferrer')}
+            onClick={() => window.open(data.text.trim(), '_blank', 'noopener,noreferrer')}
           >
             <ExternalLink className="w-5 h-5" /> {t('dreceive_open_link')}
           </Button>

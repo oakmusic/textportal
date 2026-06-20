@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { getStorageProvider } from './storage';
-import { trackBlockedIpEvent, trackMessageRetrieved } from './utils/stats';
+import { getFileStorageProvider } from './storage/fileStorage';
+import { trackBlockedIpEvent, trackMessageRetrieved, trackFileDownloaded } from './utils/stats';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -24,30 +25,53 @@ export const handler: Handler = async (event) => {
     }
 
     const message = await storage.getMessage(code);
+    const file = await storage.getFileMetadata(code);
     
-    if (!message) {
+    if (!message && !file) {
       // Register failure
       const fails = await storage.registerFailedAttempt(ip);
       if (fails >= 5) {
         await storage.blockIp(ip, 60); // block for 1 min
         await trackBlockedIpEvent(ip);
       }
-      return { statusCode: 404, body: JSON.stringify({ error: 'Message not found or expired' }) };
+      return { statusCode: 404, body: JSON.stringify({ error: 'Not found or expired' }) };
     }
     
-    // Success: reset failures and return message
+    // Success: reset failures
     await storage.resetFailedAttempts(ip);
     
     const userAgent = event.headers['user-agent'] || 'Unknown';
-    await trackMessageRetrieved(code, message.createdAt, message.text.length, userAgent);
     
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, text: message.text })
-    };
+    if (message) {
+      await trackMessageRetrieved(code, message.createdAt, message.text.length, userAgent);
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'text', text: message.text })
+      };
+    } else if (file) {
+      await trackFileDownloaded(code, file.uploadedAt, file.size, userAgent);
+      const fileStorage = getFileStorageProvider();
+      const downloadUrl = await fileStorage.getDownloadUrl(file.fileKey, file.filename);
+      
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'file', 
+          file: {
+            filename: file.filename,
+            size: file.size,
+            mimeType: file.mimeType,
+            downloadUrl
+          }
+        })
+      };
+    }
   } catch (error) {
     console.error('Receive error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) };
   }
+  
+  return { statusCode: 500, body: 'Unknown error' };
 };

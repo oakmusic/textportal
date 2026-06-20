@@ -13,7 +13,7 @@ function getRedis() {
   return redisInstance;
 }
 
-export type EventType = 'Created' | 'Retrieved' | 'Expired' | 'Blocked';
+export type EventType = 'Created' | 'Retrieved' | 'Expired' | 'Blocked' | 'FileUploaded' | 'FileDownloaded';
 
 export interface ActivityEvent {
   timestamp: number;
@@ -39,6 +39,14 @@ export interface CharacterStats {
   totalCharacters: number;
   avgMessageLength: number;
   largestMessage: number;
+}
+
+export interface FileStats {
+  filesUploaded: number;
+  totalStorage: number;
+  totalDownloads: number;
+  largestFile: number;
+  avgFileSize: number;
 }
 
 export interface FlowStats {
@@ -72,6 +80,87 @@ function parseUserAgent(ua: string) {
   else if (/safari/i.test(lowerUA) && !/chrome|crios/i.test(lowerUA)) browser = 'Safari';
 
   return { device, os, browser };
+}
+
+export async function trackFileUploaded(code: string, sizeBytes: number, mimeType: string, userAgent: string, ttlSeconds: number) {
+  const redis = getRedis();
+  if (!redis) return;
+
+  try {
+    const pipeline = redis.pipeline();
+    const now = Date.now();
+    const expiry = now + (ttlSeconds * 1000);
+
+    pipeline.incr('stats:files:uploaded');
+    pipeline.incrby('stats:files:storage', sizeBytes);
+    
+    // Type categorization
+    let cat = 'Other';
+    if (mimeType.startsWith('image/')) cat = 'Images';
+    else if (mimeType === 'application/pdf') cat = 'PDF';
+    else if (mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') cat = 'ZIP';
+    else if (mimeType.includes('msword') || mimeType.includes('office') || mimeType.includes('presentation') || mimeType.includes('spreadsheet')) cat = 'Office Documents';
+    else if (mimeType.startsWith('text/')) cat = 'Text Files';
+    
+    pipeline.incr(`stats:filetype:${cat}`);
+
+    const currentLargest = Number(await redis.get('stats:files:largest') || 0);
+    if (sizeBytes > currentLargest) {
+      pipeline.set('stats:files:largest', sizeBytes);
+    }
+
+    pipeline.zadd('stats:active_codes', { score: expiry, member: JSON.stringify({ c: code, l: sizeBytes, isFile: true }) });
+
+    const { device, os, browser } = parseUserAgent(userAgent);
+    pipeline.incr(`stats:device:${device}`);
+    pipeline.incr(`stats:os:${os}`);
+    pipeline.incr(`stats:browser:${browser}`);
+    pipeline.set(`flow_source:${code}`, device, { ex: ttlSeconds });
+
+    const date = new Date(now);
+    const dayStr = date.toISOString().split('T')[0];
+    const hourStr = `${dayStr}-${date.getUTCHours().toString().padStart(2, '0')}`;
+    pipeline.incr(`stats:day:${dayStr}`);
+    pipeline.incr(`stats:hour:${hourStr}`);
+
+    const event: ActivityEvent = { timestamp: now, code, type: 'FileUploaded' };
+    pipeline.lpush('stats:recent_activity', JSON.stringify(event));
+    pipeline.ltrim('stats:recent_activity', 0, 49);
+
+    await pipeline.exec();
+  } catch (e) {
+    console.error('Error tracking file creation:', e);
+  }
+}
+
+export async function trackFileDownloaded(code: string, createdTimestamp: number, sizeBytes: number, userAgent: string) {
+  const redis = getRedis();
+  if (!redis) return;
+
+  try {
+    const pipeline = redis.pipeline();
+    const now = Date.now();
+
+    pipeline.incr('stats:files:downloaded');
+
+    const retrievalTimeMs = now - createdTimestamp;
+    pipeline.incrby('stats:retrieval_time_sum', retrievalTimeMs);
+
+    const { device: destDevice } = parseUserAgent(userAgent);
+    const sourceDevice = await redis.get(`flow_source:${code}`);
+    const flowKey = sourceDevice ? `${sourceDevice} → ${destDevice}` : `Unknown → ${destDevice}`;
+    pipeline.incr(`stats:flow:${flowKey}`);
+
+    pipeline.zrem('stats:active_codes', JSON.stringify({ c: code, l: sizeBytes, isFile: true }));
+    
+    const event: ActivityEvent = { timestamp: now, code, type: 'FileDownloaded' };
+    pipeline.lpush('stats:recent_activity', JSON.stringify(event));
+    pipeline.ltrim('stats:recent_activity', 0, 49);
+
+    await pipeline.exec();
+  } catch (e) {
+    console.error('Error tracking file download:', e);
+  }
 }
 
 export async function trackMessageCreated(code: string, textLength: number, userAgent: string, ttlSeconds: number) {
@@ -191,14 +280,20 @@ export async function getAdminOverview() {
   const totalSent = Number(await redis.get('stats:total_sent') || 0);
   const totalRetrieved = Number(await redis.get('stats:total_retrieved') || 0);
   
-  const successRate = totalSent > 0 ? ((totalRetrieved / totalSent) * 100).toFixed(1) : 0;
+  const filesUploaded = Number(await redis.get('stats:files:uploaded') || 0);
+  const filesDownloaded = Number(await redis.get('stats:files:downloaded') || 0);
+  
+  const totalUploads = totalSent + filesUploaded;
+  const totalDowns = totalRetrieved + filesDownloaded;
+
+  const successRate = totalUploads > 0 ? ((totalDowns / totalUploads) * 100).toFixed(1) : 0;
   
   const retrievalTimeSum = Number(await redis.get('stats:retrieval_time_sum') || 0);
-  const avgTransferTime = totalRetrieved > 0 ? (retrievalTimeSum / totalRetrieved / 1000).toFixed(1) : 0;
+  const avgTransferTime = totalDowns > 0 ? (retrievalTimeSum / totalDowns / 1000).toFixed(1) : 0;
 
   return {
     activeCodes: activeCodesCount,
-    totalTransfers: totalSent,
+    totalTransfers: totalUploads,
     successRate: Number(successRate),
     avgTransferTime: Number(avgTransferTime)
   };
@@ -208,10 +303,11 @@ export async function getAdminActivity() {
   const redis = getRedis();
   if (!redis) {
     return {
-      recentActivity: [], activeCodes: [], devices: {}, os: {}, browsers: {}, flows: {}, blockedIps: [],
+      recentActivity: [], activeCodes: [], devices: {}, os: {}, browsers: {}, flows: {}, blockedIps: [], fileTypes: {},
       performance: { fastest: 0, slowest: 0 },
       messageStats: { totalSent: 0, totalRetrieved: 0, totalExpired: 0, totalActive: 0 },
-      characterStats: { totalCharacters: 0, avgMessageLength: 0, largestMessage: 0 }
+      characterStats: { totalCharacters: 0, avgMessageLength: 0, largestMessage: 0 },
+      fileStats: { filesUploaded: 0, totalStorage: 0, totalDownloads: 0, largestFile: 0, avgFileSize: 0 }
     };
   }
 
@@ -223,14 +319,17 @@ export async function getAdminActivity() {
 
   const activeCodeStrs = await redis.zrange('stats:active_codes', 0, -1, { withScores: true });
   const activeCodes = [];
+  let textActive = 0;
   for (let i = 0; i < activeCodeStrs.length; i += 2) {
     const dataVal = activeCodeStrs[i];
     const expiresAt = Number(activeCodeStrs[i + 1]);
     try {
-      const { c, l } = typeof dataVal === 'string' ? JSON.parse(dataVal) : dataVal;
-      activeCodes.push({ code: c, length: l, expiresAt });
+      const { c, l, isFile } = typeof dataVal === 'string' ? JSON.parse(dataVal) : dataVal;
+      activeCodes.push({ code: c, length: l, expiresAt, isFile });
+      if (!isFile) textActive++;
     } catch(e) {
-      activeCodes.push({ code: String(dataVal), length: 0, expiresAt });
+      activeCodes.push({ code: String(dataVal), length: 0, expiresAt, isFile: false });
+      textActive++;
     }
   }
 
@@ -249,6 +348,10 @@ export async function getAdminActivity() {
   const flowKeys = await redis.keys('stats:flow:*');
   const flows: Record<string, number> = {};
   for (const k of flowKeys) flows[k.substring('stats:flow:'.length)] = Number(await redis.get(k) || 0);
+  
+  const fileTypeKeys = await redis.keys('stats:filetype:*');
+  const fileTypes: Record<string, number> = {};
+  for (const k of fileTypeKeys) fileTypes[k.split(':').pop()!] = Number(await redis.get(k) || 0);
 
   const blockedKeys = await redis.keys('blocked:*');
   const blockedIps = [];
@@ -264,10 +367,16 @@ export async function getAdminActivity() {
 
   const totalSent = Number(await redis.get('stats:total_sent') || 0);
   const totalRetrieved = Number(await redis.get('stats:total_retrieved') || 0);
-  const totalExpired = Math.max(0, totalSent - totalRetrieved - activeCodes.length);
+  const totalExpired = Math.max(0, totalSent - totalRetrieved - textActive);
   const charsTotal = Number(await redis.get('stats:characters_total') || 0);
   const avgMessageLength = totalSent > 0 ? Math.round(charsTotal / totalSent) : 0;
   const largestMessage = Number(await redis.get('stats:largest_message') || 0);
+  
+  const filesUploaded = Number(await redis.get('stats:files:uploaded') || 0);
+  const totalStorage = Number(await redis.get('stats:files:storage') || 0);
+  const totalDownloads = Number(await redis.get('stats:files:downloaded') || 0);
+  const largestFile = Number(await redis.get('stats:files:largest') || 0);
+  const avgFileSize = filesUploaded > 0 ? Math.round(totalStorage / filesUploaded) : 0;
 
   return {
     recentActivity,
@@ -276,10 +385,12 @@ export async function getAdminActivity() {
     os,
     browsers,
     flows,
+    fileTypes,
     blockedIps,
     performance: { fastest, slowest },
-    messageStats: { totalSent, totalRetrieved, totalExpired, totalActive: activeCodes.length },
-    characterStats: { totalCharacters: charsTotal, avgMessageLength, largestMessage }
+    messageStats: { totalSent, totalRetrieved, totalExpired, totalActive: textActive },
+    characterStats: { totalCharacters: charsTotal, avgMessageLength, largestMessage },
+    fileStats: { filesUploaded, totalStorage, totalDownloads, largestFile, avgFileSize }
   };
 }
 
