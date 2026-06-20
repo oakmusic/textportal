@@ -1,17 +1,29 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Hexagon } from 'lucide-react';
+import { Hexagon, Info } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import AboutModal from './AboutModal';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-tp-bg text-tp-primary p-4 md:p-8 selection:bg-tp-blue/30 relative">
+      {/* About Info Button */}
+      <div className="absolute top-4 left-4 md:top-8 md:left-8 z-50">
+        <button 
+          onClick={() => setIsAboutOpen(true)}
+          className="p-2.5 rounded-full bg-tp-surface/30 backdrop-blur-md border border-white/5 text-tp-secondary/70 hover:text-tp-primary hover:bg-tp-surface/50 transition-all hover:scale-105 active:scale-95"
+          title={t('about_title')}
+        >
+          <Info className="w-5 h-5" />
+        </button>
+      </div>
       {/* Language Selector */}
       <div className="absolute top-4 right-4 md:top-8 md:right-8 flex items-center gap-2 bg-tp-surface/30 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/5 z-50">
         <button 
@@ -48,6 +60,8 @@ export default function Layout({ children }: LayoutProps) {
       <footer className="w-full text-center py-6 text-tp-secondary/60 text-sm mt-auto">
         &copy; {new Date().getFullYear()} {t('app_title')}. {t('app_subtitle')}
       </footer>
+
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </div>
   );
 }
