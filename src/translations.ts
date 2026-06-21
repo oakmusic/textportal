@@ -46,6 +46,7 @@ export const translations = {
     dreceive_copy_text: "COPY TEXT",
     dreceive_open_link: "OPEN LINK",
     dreceive_download: "DOWNLOAD",
+    dreceive_copy_image: "COPY",
 
     // FileUploader
     uploader_drag: "Click to select or drag and drop",
@@ -125,6 +126,7 @@ export const translations = {
     dreceive_copy_text: "COPIAR TEXTO",
     dreceive_open_link: "ABRIR ENLACE",
     dreceive_download: "DESCARGAR",
+    dreceive_copy_image: "COPIAR",
 
     // FileUploader
     uploader_drag: "Haz clic para seleccionar o arrastra y suelta",

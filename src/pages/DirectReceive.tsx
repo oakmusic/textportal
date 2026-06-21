@@ -4,7 +4,7 @@ import { Copy, ExternalLink, Loader2, CheckCircle2, Download, File } from 'lucid
 import Button from '../components/Button';
 import TextArea from '../components/TextArea';
 import { receiveText } from '../utils/api';
-import { copyToClipboard } from '../utils/clipboard';
+import { copyToClipboard, copyImageToClipboard } from '../utils/clipboard';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function DirectReceive() {
@@ -52,6 +52,19 @@ export default function DirectReceive() {
   const handleCopy = async () => {
     if (data?.type === 'text') {
       const success = await copyToClipboard(data.text);
+      if (success) {
+        setCopied(true);
+        setCopyError(false);
+        setTimeout(() => setCopied(false), 3000);
+      } else {
+        setCopyError(true);
+      }
+    }
+  };
+
+  const handleCopyImage = async () => {
+    if (data?.type === 'file' && data.file.mimeType.startsWith('image/')) {
+      const success = await copyImageToClipboard(data.file.downloadUrl);
       if (success) {
         setCopied(true);
         setCopyError(false);
@@ -128,14 +141,34 @@ export default function DirectReceive() {
             <span className="text-tp-secondary tracking-wider">{formatSize(file.size)}</span>
           </div>
 
-          <div className="w-full flex gap-3 mt-4">
-            <Button 
-              variant="primary" 
-              fullWidth 
-              onClick={() => window.open(file.downloadUrl, '_blank')}
-            >
-              <Download className="w-5 h-5" /> {t('dreceive_download')}
-            </Button>
+          <div className="w-full flex flex-col items-center gap-2 mt-4">
+            <div className="w-full flex gap-3">
+              {isImage && (
+                <Button 
+                  variant="secondary" 
+                  fullWidth 
+                  onClick={handleCopyImage}
+                >
+                  {copied ? (
+                    <><CheckCircle2 className="w-5 h-5" /> {t('dreceive_copied')}</>
+                  ) : (
+                    <><Copy className="w-5 h-5" /> {t('dreceive_copy_image')}</>
+                  )}
+                </Button>
+              )}
+              <Button 
+                variant="primary" 
+                fullWidth 
+                onClick={() => window.open(file.downloadUrl, '_blank')}
+              >
+                <Download className="w-5 h-5" /> {t('dreceive_download')}
+              </Button>
+            </div>
+            {copyError && isImage && (
+              <span className="text-tp-red text-sm font-semibold tracking-wider text-center mt-1">
+                {t('dreceive_copy_error')}
+              </span>
+            )}
           </div>
         </div>
       </div>

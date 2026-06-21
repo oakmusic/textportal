@@ -10,7 +10,9 @@ export async function sendText(text: string): Promise<{ code: string; url: strin
     throw new Error(data.error || 'Failed to send text');
   }
   
-  return res.json();
+  const data = await res.json();
+  data.url = `${window.location.origin}/r/${data.code}`;
+  return data;
 }
 
 export async function receiveText(code: string): Promise<any> {
@@ -53,5 +55,7 @@ export async function uploadFile(file: File): Promise<{ code: string; url: strin
     throw new Error(data.error || 'Failed to upload file');
   }
 
-  return res.json();
+  const data = await res.json();
+  data.url = `${window.location.origin}/r/${data.code}`;
+  return data;
 }
