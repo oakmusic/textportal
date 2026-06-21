@@ -43,7 +43,6 @@ export async function copyImageToClipboard(imageUrl: string): Promise<boolean> {
       
       return new Promise<Blob>((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.onload = () => {
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
@@ -60,19 +59,21 @@ export async function copyImageToClipboard(imageUrl: string): Promise<boolean> {
       });
     };
 
+    const blobPromise = fetchImageAsPng();
+
     try {
       // Safari requires the Promise to be passed directly to ClipboardItem
       // This ensures navigator.clipboard.write is called synchronously
       await navigator.clipboard.write([
         new ClipboardItem({
-          'image/png': fetchImageAsPng()
+          'image/png': blobPromise
         })
       ]);
       return true;
     } catch (e: any) {
       // Firefox does not support Promises in ClipboardItem yet, but its user gesture token
       // survives the await. We catch the synchronous TypeError and try the fallback.
-      const blob = await fetchImageAsPng();
+      const blob = await blobPromise;
       await navigator.clipboard.write([
         new ClipboardItem({
           'image/png': blob
