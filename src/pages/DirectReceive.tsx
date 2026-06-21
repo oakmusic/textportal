@@ -64,7 +64,7 @@ export default function DirectReceive() {
 
   const handleCopyImage = async () => {
     if (data?.type === 'file' && data.file.mimeType.startsWith('image/')) {
-      const success = await copyImageToClipboard(data.file.downloadUrl);
+      const success = await copyImageToClipboard(data.file.previewUrl);
       if (success) {
         setCopied(true);
         setCopyError(false);

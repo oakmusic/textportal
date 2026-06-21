@@ -33,44 +33,55 @@ export async function copyImageToClipboard(imageUrl: string): Promise<boolean> {
       return false;
     }
 
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob
-        })
-      ]);
-      return true;
-    } catch (e) {
-      const img = new Image();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+    const fetchImageAsPng = async (): Promise<Blob> => {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
       
-      const pngBlob = await new Promise<Blob | null>((resolve, reject) => {
+      if (blob.type === 'image/png') {
+        return blob;
+      }
+      
+      return new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
+          const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0);
-          canvas.toBlob((b) => resolve(b), 'image/png');
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error('Failed to convert image'));
+          }, 'image/png');
         };
         img.onerror = reject;
         img.src = URL.createObjectURL(blob);
       });
+    };
 
-      if (pngBlob) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'image/png': pngBlob
-          })
-        ]);
-        return true;
-      }
+    try {
+      // Safari requires the Promise to be passed directly to ClipboardItem
+      // This ensures navigator.clipboard.write is called synchronously
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': fetchImageAsPng()
+        })
+      ]);
+      return true;
+    } catch (e: any) {
+      // Firefox does not support Promises in ClipboardItem yet, but its user gesture token
+      // survives the await. We catch the synchronous TypeError and try the fallback.
+      const blob = await fetchImageAsPng();
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': blob
+        })
+      ]);
+      return true;
     }
-    return false;
   } catch (err) {
-    console.error('Failed to copy image to clipboard', err);
+    console.error('Failed to copy image to clipboard:', err);
     return false;
   }
 }
