@@ -25,4 +25,5 @@ dist-ssr
 
 # TextPortal specific
 .local-store.json
+.local-store/
 .netlify
