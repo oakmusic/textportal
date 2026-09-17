@@ -41,7 +41,7 @@ export class R2StorageProvider implements FileStorageProvider {
       Key: key,
       ResponseContentDisposition: `${disposition}; filename="${filename}"`
     });
-    return await getSignedUrl(this.client, command, { expiresIn: 3600 });
+    return await getSignedUrl(this.client, command, { expiresIn: 1800 });
   }
 
   async deleteFile(key: string): Promise<void> {

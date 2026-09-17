@@ -15,7 +15,7 @@ export default function Result({ code, url, file }: ResultProps) {
   const { t } = useLanguage();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(file ? 24 * 60 * 60 : 300); // 24 hours for file, 5 mins for text
+  const [timeLeft, setTimeLeft] = useState(file ? 30 * 60 : 300); // 30 mins for file, 5 mins for text
 
   useEffect(() => {
     const interval = setInterval(() => {

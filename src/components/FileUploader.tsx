@@ -7,7 +7,7 @@ interface FileUploaderProps {
   disabled?: boolean;
 }
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export default function FileUploader({ onFileSelect, disabled }: FileUploaderProps) {

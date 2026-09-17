@@ -5,9 +5,9 @@ import { getFileStorageProvider } from './storage/fileStorage';
 import { generateCode } from './utils/codeGenerator';
 import { trackFileUploaded } from './utils/stats';
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-const TTL_SECONDS = 24 * 60 * 60; // 24 hours
+const TTL_SECONDS = 30 * 60; // 30 minutes
 
 const DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.cmd', '.ps1', '.msi', '.vbs', '.scr'];
 
