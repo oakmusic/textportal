@@ -1,11 +1,12 @@
-import { useState, FormEvent } from 'react';
-import { Send as SendIcon, Loader2, Type, File as FileIcon } from 'lucide-react';
+import { useState, useEffect, FormEvent } from 'react';
+import { Send as SendIcon, Loader2, Type, File as FileIcon, UploadCloud } from 'lucide-react';
 import Button from '../components/Button';
 import TextArea from '../components/TextArea';
 import FileUploader from '../components/FileUploader';
 import { sendText, uploadFile } from '../utils/api';
 import Result from './Result';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getAndClearSharedItem } from '../utils/sharedStore';
 
 export default function Send() {
   const { t } = useLanguage();
@@ -15,8 +16,69 @@ export default function Send() {
   const [file, setFile] = useState<File | null>(null);
   
   const [loading, setLoading] = useState(false);
+  const [autoUploading, setAutoUploading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ code: string; url: string; file?: File } | null>(null);
+
+  // Check for shared file or text on mount (from Web Share Target)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkSharedData() {
+      try {
+        const sharedItem = await getAndClearSharedItem();
+        if (!sharedItem || !isMounted) return;
+
+        if (sharedItem.file) {
+          // Convert Blob to File if needed
+          let fileObj: File;
+          if (sharedItem.file instanceof File) {
+            fileObj = sharedItem.file;
+          } else {
+            fileObj = new File([sharedItem.file], sharedItem.fileName || 'shared-file', {
+              type: sharedItem.fileType || 'application/octet-stream',
+            });
+          }
+
+          setActiveTab('file');
+          setFile(fileObj);
+          setAutoUploading(true);
+          setLoading(true);
+          setError('');
+
+          try {
+            const data = await uploadFile(fileObj);
+            if (isMounted) {
+              setResult({ ...data, file: fileObj });
+            }
+          } catch (err: any) {
+            if (isMounted) {
+              setError(err.message || t('send_error'));
+            }
+          } finally {
+            if (isMounted) {
+              setLoading(false);
+              setAutoUploading(false);
+            }
+          }
+        } else if (sharedItem.text || sharedItem.url) {
+          setActiveTab('text');
+          const combined = [sharedItem.title, sharedItem.text, sharedItem.url]
+            .filter(Boolean)
+            .join('\n');
+          setText(combined);
+        }
+      } catch (err) {
+        console.warn('Error reading shared item:', err);
+      }
+    }
+
+    checkSharedData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault();
@@ -50,6 +112,16 @@ export default function Send() {
     <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-6 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-bold tracking-wider mb-2">{t('send_title')}</h2>
       
+      {autoUploading && (
+        <div className="w-full bg-tp-blue/15 border border-tp-blue/40 rounded-2xl p-4 flex items-center gap-3 text-tp-blue animate-pulse">
+          <UploadCloud className="w-6 h-6 animate-bounce shrink-0" />
+          <div className="flex flex-col">
+            <span className="font-semibold text-sm">{t('share_uploading')}</span>
+            <span className="text-xs text-tp-secondary truncate max-w-xs">{file?.name}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex bg-black/20 p-1 rounded-xl w-full border border-tp-blue/20">
         <button
           onClick={() => { setActiveTab('text'); setError(''); }}

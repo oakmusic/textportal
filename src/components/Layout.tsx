@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Hexagon, Info } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AboutModal from './AboutModal';
+import InstallModal from './InstallModal';
 
 interface LayoutProps {
   children: ReactNode;
@@ -62,6 +63,7 @@ export default function Layout({ children }: LayoutProps) {
       </footer>
 
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+      <InstallModal />
     </div>
   );
 }

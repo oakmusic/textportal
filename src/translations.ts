@@ -79,7 +79,15 @@ export const translations = {
     about_footer_1: "📝 Text: 5 minutes",
     about_footer_2: "📁 Files: 30 minutes",
     about_footer_3: "👤 No account required",
-    about_footer_4: "🔓 Open source"
+    about_footer_4: "🔓 Open source",
+
+    // PWA & Share
+    install_title: "Install TextPortal",
+    install_desc: "Add to home screen to share photos and files directly.",
+    install_button: "INSTALL",
+    install_ios_guide: "Tap Share ⎋ and select 'Add to Home Screen' ⊞",
+    share_uploading: "Uploading shared file...",
+    share_text_received: "Shared text received"
   },
   es: {
     // Layout
@@ -159,7 +167,15 @@ export const translations = {
     about_footer_1: "📝 Textos: 5 minutos",
     about_footer_2: "📁 Archivos: 30 minutos",
     about_footer_3: "👤 Sin registro",
-    about_footer_4: "🔓 Código abierto"
+    about_footer_4: "🔓 Código abierto",
+
+    // PWA & Share
+    install_title: "Instalar TextPortal",
+    install_desc: "Añade a tu pantalla de inicio para compartir fotos y archivos directamente.",
+    install_button: "INSTALAR",
+    install_ios_guide: "Pulsa el botón Compartir ⎋ y luego 'Añadir a pantalla de inicio' ⊞",
+    share_uploading: "Enviando archivo compartido...",
+    share_text_received: "Texto compartido recibido"
   }
 };
 
